@@ -8,7 +8,7 @@ This is a personal / educational project built to practice the full lifecycle of
 
 Given a student's engagement and performance data through week 6 of a module, predict whether their final module score will fall below the pass mark (40).
 
-**Constraint:** every feature must be genuinely knowable by week 6. This ruled out using anything from weeks 7+ or the final score itself, and required verifying — not assuming — that every joined data source (demographics, prior years, survey, module metadata) was actually available before or during that window.
+**Constraint:** every feature must be genuinely knowable by week 6. This ruled out using anything from weeks 7+ or the final score itself, and required verifying that every joined data source (demographics, prior years, survey, module metadata) was actually available before or during that window.
 
 ## Data
 
@@ -39,11 +39,10 @@ Given a student's engagement and performance data through week 6 of a module, pr
 - Prior-year data uses `.shift(1)`, never the current year.
 - Enrolment survey and demographics were confirmed to be genuinely known before week 6 (start-of-year survey, static student facts), not just topically related.
 - An explicit `non_feature_cols` exclusion list acts as a final gate at training time, independent of upstream feature-building logic.
-- **Known gap:** cross-validation currently uses `StratifiedKFold`, which does not guarantee a given student's records stay within a single fold if they appear in multiple modules/years. `GroupKFold` (grouped by `student_id`) would close this identity-leakage risk — not yet implemented.
 
 ## Model
 
-XGBoost gradient-boosted classifier (300 trees, max depth 3, subsampling + L1/L2 regularization), with `scale_pos_weight` applied to counter class imbalance and prioritize recall on the at-risk class.
+XGBoost gradient-boosted classifier (300 trees, max depth 3, row/column subsampling), with `scale_pos_weight` applied to counter class imbalance and prioritize recall on the at-risk class. Uses XGBoost's default L2 regularization (`reg_lambda=1.0`); L1 regularization (`reg_alpha`) has not been explicitly tuned and is left at its default of 0.
 
 ## Results
 
@@ -63,8 +62,9 @@ Top predictive features: prior-year average mark, education level, socio-economi
 
 - Built on a sample/synthetic dataset — patterns may not generalize to a real student population.
 - Missing-value imputation uses a single global median rather than subgroup-aware imputation.
-- Cross-validation does not yet account for repeated students across folds (see leakage safeguards above).
+- Cross-validation currently uses `StratifiedKFold`, which does not guarantee a given student's records stay within a single fold if they appear in multiple modules/years. `GroupKFold` (grouped by `student_id`) would close this identity-leakage risk — not yet implemented.
 - No logistic regression or dummy-classifier baseline has been run yet to quantify how much predictive power comes from XGBoost's non-linear/interaction modeling versus the engineered features themselves.
+- Regularization hyperparameters (`reg_alpha`, `reg_lambda`) are left at XGBoost's defaults rather than tuned via cross-validation.
 
 ## Requirements
 
